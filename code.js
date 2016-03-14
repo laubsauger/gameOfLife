@@ -171,11 +171,7 @@ Game.prototype = {
         this.tick();
             
         if (this.playing) {
-<<<<<<< HEAD
-           setTimeout(this.play.bind(this), 16);
-=======
            setTimeout(this.play.bind(this), this.timerDelay);
->>>>>>> master
         }
     },
     tick: function() {

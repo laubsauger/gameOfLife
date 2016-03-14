@@ -1,0 +1,41 @@
+body {
+    padding: 20px;
+    background-color: rgb(22, 22, 22);
+}
+#gridContainer {
+    padding-bottom: 10px;
+}
+table {
+    border-spacing: 0px;
+}
+td {
+    border: 1px solid rgb(33, 33, 33);
+    width: 8px;
+    height: 8px;
+}
+td.dead {
+    background-color: transparent;
+}
+td.newborn {
+    background-color: #ff9933;
+}
+td.aged {
+    background-color:  #ff3300;
+}
+button {
+    background-color: #000;
+    color: #ddd;
+    padding: 5px 10px;
+    font-size: 1em;
+    /*margin: 0;*/
+    border: 1px solid rgb(75, 75, 75);
+}
+button:focus {
+    outline-color: #ff3300;
+}
+td:nth-child(10n) {
+    border-right: 1px solid rgb(50, 50, 50);
+}
+tr:nth-child(10n) td{
+    border-bottom: 1px solid rgb(50, 50, 50);
+}

@@ -1,6 +1,7 @@
 var Game = function() {
-    this.rows = 72;
-    this.cols = 150;
+    this.rows = 98;
+    this.cols = 210;
+    this.timerDelay = 25;
     this.playing = false;
 };
 
@@ -170,7 +171,11 @@ Game.prototype = {
         this.tick();
             
         if (this.playing) {
+<<<<<<< HEAD
            setTimeout(this.play.bind(this), 16);
+=======
+           setTimeout(this.play.bind(this), this.timerDelay);
+>>>>>>> master
         }
     },
     tick: function() {

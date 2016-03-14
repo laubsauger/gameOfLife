@@ -1,5 +1,5 @@
 body {
-    padding: 20px;
+    padding: 10px;
     background-color: rgb(22, 22, 22);
 }
 #gridContainer {
@@ -10,8 +10,8 @@ table {
 }
 td {
     border: 1px solid rgb(33, 33, 33);
-    width: 8px;
-    height: 8px;
+    width: 5px;
+    height: 5px;
 }
 td.dead {
     background-color: transparent;

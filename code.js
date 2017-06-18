@@ -3,6 +3,7 @@ var Game = function() {
     this.cols = 210;
     this.timerDelay = 25;
     this.playing = false;
+    this.dragging = false;
 };
 
 Game.prototype = {
@@ -111,18 +112,46 @@ Game.prototype = {
         this.registerClickListener(this.startButton, this.startButtonClickHandler.bind(this));
         this.registerClickListener(this.resetButton, this.resetButtonClickHandler.bind(this));
         this.registerClickListener(this.randomButton, this.randomButtonClickHandler.bind(this));
+        this.registerDragListener(this.gridContainer, this.leftMouseDragHandler.bind(this));
     },
     registerClickListener: function(element, handler) {
         element.addEventListener('click', handler, false);
     },
+    registerDragListener: function(element, handler) {
+        element.addEventListener('mousedown', (function(e) {
+            this.dragging = true;
+            
+            if (e.target !== e.currentTarget && e.target.tagName === 'TD') {
+                var startCellIndex = this.getCellIndex(e.target);
+            }
+            
+            console.log(this.dragging, startCellIndex);
+            
+            e.stopPropagation();  
+        }).bind(this), false);
+        
+        element.addEventListener('mousemove', handler, false);
+        
+        element.addEventListener('mouseup', handler, false);
+    },
     cellClickHandler: function(e) {
         if (e.target !== e.currentTarget && e.target.tagName === 'TD') {
-            var cellIndex = e.target.getAttribute('id').split('_');
+            var cellIndex = this.getCellIndex(e.target);
             this.gridState[cellIndex[0]][cellIndex[1]] = typeof this.gridState[cellIndex[0]][cellIndex[1]] === "undefined" || this.gridState[cellIndex[0]][cellIndex[1]] === 0 ? 1 : 0;
             this.updateCellView(e.target, this.gridState[cellIndex[0]][cellIndex[1]]);
         }
         
         e.stopPropagation();
+    },
+    getCellIndex: function(cellElement) {
+          return cellElement.getAttribute('id').split('_');
+    },
+    leftMouseDragHandler: function(e) {
+        if (e !== e.currentTarget && e.target.tagName === 'TD') {
+            var startCellIndex = e.target.getAttribute('id').split('_');
+        } 
+        
+        e.stopPropagation();  
     },
     startButtonClickHandler: function(e) {
         if (!this.playing) {

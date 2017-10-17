@@ -1,10 +1,21 @@
 var Game = function() {
     this.rows = 64;
     this.cols = 64;
-    this.timerDelay = 16;
+    this.cellWidth = 16;
+    this.cellHeight = 16;
+    this.timerDelay = 160;
     this.playing = false;
     this.dragging = false;
-    this.cellElements = []; 
+    this.cellElements = [];
+    this.CONST = {
+        state: {
+            alive: 1,
+            dead: 0,
+            aged: 2,
+            aliveNext: 3,
+            deadNext: 4
+        }    
+    };
 };
 
 Game.prototype = {
@@ -39,6 +50,8 @@ Game.prototype = {
                 var cell = document.createElement('td');
                 cell.setAttribute('id', iRows + '_' + iCols);
                 cell.setAttribute('class', gridState[iRows][iCols] ? 'live newborn' : 'dead');
+                cell.setAttribute('width', this.cellWidth);
+                cell.setAttribute('height', this.cellHeight);
                 tr.appendChild(cell);
                 
                 this.cellElements[iRows + '_' + iCols] = cell;
@@ -59,7 +72,7 @@ Game.prototype = {
     updateGridView: function() {
         for (var iRows = 0; iRows < this.rows; iRows++) {
             for (var iCols = 0; iCols < this.cols; iCols++) {
-                this.updateCellView(this.cellElements[iRows + '_' + iCols], this.updateCellState(iRows, iCols));
+                this.updateCellView(this.cellElements[iRows + '_' + iCols], this.gridState[iRows, iCols], this.updateCellState(iRows, iCols));
             }
         }
     },
@@ -74,21 +87,38 @@ Game.prototype = {
         var liveCells = this.gridContainer.getElementsByTagName('td');
         
         Array.prototype.forEach.call(liveCells, function(cell) {
-            self.updateCellView(cell, 0);
+            self.updateCellView(cell, 0, 0);
         });
     },
-    updateCellView: function(cellElement, nextCellState) {
-        var cellClass;
-
-        if (nextCellState === 0) {
-            cellClass = 'dead';
-        } else if (nextCellState === 1) {
-            cellClass = 'live newborn';
-        } else {
-            cellClass = 'live aged';
+    updateCellView: function(cellElement, cellState, nextCellState) {
+        console.log('cellState', cellState, 'nextCellState', nextCellState);
+        cellElement.setAttribute('class', this.getCellClassByState(cellState, nextCellState));
+    },
+    getCellClassByState: function(cellState, nextCellState) {
+        switch(nextCellState) {
+            case this.CONST.state.dead: 
+                return 'dead';
+            case this.CONST.state.deadNext:
+                var baseClass = '';
+                
+                if (cellState === this.CONST.state.alive) {
+                    baseClass = 'live newborn'
+                }
+                
+                if (cellState === this.CONST.state.aged) {
+                    baseClass = 'live aged';
+                }
+                
+                return baseClass + ' dead--next';
+            case this.CONST.state.alive: 
+                return 'live newborn';
+            case this.CONST.state.aliveNext:
+                return 'newborn--next';
+            case this.CONST.state.aged:
+                return 'live aged';
+            default:
+                throw Error('next cell state has no corresponding class');
         }
-        
-        cellElement.setAttribute('class', cellClass);
     },
     setupControls: function() {
         this.startButton = document.getElementById('start');
@@ -118,9 +148,9 @@ Game.prototype = {
             return;
         }
     
-    
         this.registerClickListener(this.gridContainer, this.cellClickHandler.bind(this));
-        this.registerDragListener(this.gridContainer, this.leftMouseDragHandler.bind(this));
+        //@TODO: this is not working
+        // this.registerDragListener(this.gridContainer, this.leftMouseDragHandler.bind(this));
         
         this.registerClickListener(this.startButton, this.startButtonClickHandler.bind(this));
         this.registerClickListener(this.resetButton, this.resetButtonClickHandler.bind(this));
@@ -150,8 +180,11 @@ Game.prototype = {
     cellClickHandler: function(e) {
         if (e.target !== e.currentTarget && e.target.tagName === 'TD') {
             var cellIndex = this.getCellIndex(e.target);
-            this.gridState[cellIndex[0]][cellIndex[1]] = typeof this.gridState[cellIndex[0]][cellIndex[1]] === "undefined" || this.gridState[cellIndex[0]][cellIndex[1]] === 0 ? 1 : 0;
-            this.updateCellView(e.target, this.gridState[cellIndex[0]][cellIndex[1]]);
+            
+            var nextCellState = typeof this.gridState[cellIndex[0]][cellIndex[1]] === "undefined" || this.gridState[cellIndex[0]][cellIndex[1]] === this.CONST.state.dead ? this.CONST.state.alive : this.CONST.state.dead;
+            
+            this.updateCellView(e.target, this.gridState[cellIndex[0]][cellIndex[1]] || 0, nextCellState);
+            this.gridState[cellIndex[0]][cellIndex[1]] = nextCellState;
         }
         
         e.stopPropagation();
@@ -159,12 +192,13 @@ Game.prototype = {
     getCellIndex: function(cellElement) {
           return cellElement.getAttribute('id').split('_');
     },
+    //@TODO: implement me
     leftMouseDragHandler: function(e) {
-        if (e !== e.currentTarget && e.target.tagName === 'TD') {
-            var startCellIndex = e.target.getAttribute('id').split('_');
-        } 
+        // if (e !== e.currentTarget && e.target.tagName === 'TD') {
+        //     var startCellIndex = e.target.getAttribute('id').split('_');
+        // } 
         
-        e.stopPropagation();  
+        // e.stopPropagation();  
     },
     startButtonClickHandler: function(e) {
         if (!this.playing) {
@@ -183,7 +217,7 @@ Game.prototype = {
         this.reset();
         for (var iRows = 0; iRows < this.rows; iRows++) {
             for(var iCols = 0; iCols < this.cols; iCols++) {
-                var cellState = this.getRandomInt(0, 2);
+                var cellState = this.getRandomInt(0, 1);
                 this.nextGridState[iRows][iCols] = cellState;
             }
         }
@@ -195,12 +229,16 @@ Game.prototype = {
     start: function() {
         console.log('Starting Game');
         this.startButton.textContent = 'pause';
+        this.startButton.classList.add('running');
+        this.startButton.classList.remove('paused');
         this.playing = true;
         this.play();
     },
     pause: function() {
         console.log('Pausing Game');
         this.startButton.textContent = 'continue';
+        this.startButton.classList.add('paused');
+        this.startButton.classList.remove('running');
         this.playing = false;
         clearTimeout(this.cachedInterval);
     },
@@ -209,6 +247,8 @@ Game.prototype = {
         
         console.log('Resetting Game');
         this.startButton.textContent = 'start';
+        this.startButton.classList.remove('paused');
+        this.startButton.classList.remove('running');
         this.resetGridState();
         this.resetGridView();
     },
@@ -224,36 +264,71 @@ Game.prototype = {
         this.updateGridView();
     },
     calculateNextGridState: function() {
+        var tempGridState = [];
+        
+        for (var iRows = 0; iRows < this.rows; iRows++) {
+            tempGridState[iRows] = [];
+            for (var iCols = 0; iCols < this.cols; iCols++) {
+                var nextCellState = this.getNextCellState(this.gridState[iRows][iCols], this.getNumberOfAdjacentLivingCells(this.gridState, iRows, iCols), false);
+                tempGridState[iRows][iCols] = nextCellState;
+            }
+        }
+        
+        this.nextGridState = tempGridState;
+        
+        // calculate again to find future state
         for (var iRows = 0; iRows < this.rows; iRows++) {
             for (var iCols = 0; iCols < this.cols; iCols++) {
-                var nextCellState = this.getNextCellState(iRows, iCols);
+                var nextCellState = this.getNextCellState(tempGridState, this.getNumberOfAdjacentLivingCells(tempGridState, iRows, iCols), true);
                 this.nextGridState[iRows][iCols] = nextCellState;
             }
         }
     },
-    getNextCellState: function(row, col) {
-        var cellState = this.gridState[row][col];
-        var numAdjacentLivingCells = this.getNumberOfAdjacentLivingCells(row, col); 
-
-        if (!cellState) {
+    getNextCellState: function(cellState, numAdjacentLivingCells, isPredictionPass) {
+        // var deadState = this.CONST.state.dead;
+        // var aliveState = this.CONST.state.alive;
+        // var agedState = this.CONST.state.aged;
+        
+        // if (isPredictionPass) {
+        //     deadState = this.CONST.state.deadNext;
+        //     aliveState = this.CONST.state.aliveNext;
+        // }
+        
+        if (cellState === this.CONST.state.dead) {
             if (numAdjacentLivingCells === 3) {
-                return 1;
+                if (isPredictionPass) {
+                    return this.CONST.state.aliveNext    
+                }
+                
+                return this.CONST.state.alive;
             }
             
-            return 0;
+            if (isPredictionPass) {
+                return this.CONST.state.deadNext;
+            }
+            
+            return this.CONST.state.dead;
         }
         
         if (numAdjacentLivingCells < 2 || numAdjacentLivingCells > 3) {
-            return 0;
+            if (isPredictionPass) {
+                return this.CONST.state.deadNext;
+            }
+            
+            return this.CONST.state.dead;
         }
         
         if (numAdjacentLivingCells === 2 || numAdjacentLivingCells === 3) {
-            return 2;
+            return this.CONST.state.aged;
         }
         
-        return 0;
+        if (isPredictionPass) {
+            return this.CONST.state.deadNext;
+        }
+        
+        return this.CONST.state.dead;
     },
-    getNumberOfAdjacentLivingCells: function(row, col) {
+    getNumberOfAdjacentLivingCells: function(gridState, row, col) {
         var livingCells = 0;
         
         var neighbours = [
@@ -268,15 +343,23 @@ Game.prototype = {
         ];
         
         for (var i = 0; i < neighbours.length; i++) {
-            if (neighbours[i][0] >= 0 && neighbours[i][1] >= 0 && neighbours[i][0] < this.rows && neighbours[i][1] < this.cols &&
-                this.gridState[neighbours[i][0]][neighbours[i][1]] > 0
-            ) {
+            var neighbourRow = neighbours[i][0];
+            var neighbourCol = neighbours[i][1];
+            
+            if (neighbourRow < 0 || neighbourCol < 0 || neighbourRow >= this.rows || neighbourCol >= this.cols) {
+                // out of bounds
+                continue;
+            }
+            
+            var neighbourCellState = gridState[neighbourRow][neighbourCol]; 
+            
+            if (neighbourCellState === this.CONST.state.alive || neighbourCellState === this.CONST.state.aged) {
                 livingCells++;
             }
         }
     
         return livingCells;
-    } 
+    }
 };
 
 

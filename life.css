@@ -3,6 +3,14 @@ body {
     background-color: rgb(46, 56, 84);
 }
 
+.label {
+    margin-bottom: 5px;
+}
+
+.controls > div {
+    margin-bottom: 10px;
+}
+
 #gridContainer {
     padding-bottom: 10px;
 }
@@ -78,5 +86,16 @@ button {
     border: 1px solid rgb(75, 75, 75);
 }
 button:focus {
-    outline-color: #ff3300;
+    outline-color: transparent;
+}
+button#start {
+    
+}
+button#start.running {
+    background-color: green;
+
+}
+button#start.paused {
+    background-color: #f99e00;
+    color: #333;
 }

@@ -1,18 +1,30 @@
 body {
     padding: 10px;
-    background-color: rgb(22, 22, 22);
+    background-color: rgb(46, 56, 84);
 }
+
 #gridContainer {
     padding-bottom: 10px;
 }
+
 table {
+    table-layout: fixed;
     border-spacing: 0px;
+    border-collapse: collapse;
+    background-color: #232323;
 }
+
 td {
-    border: 1px solid rgb(33, 33, 33);
-    width: 5px;
-    height: 5px;
+    position: relative;
+    border: 1px solid rgb(0, 0, 0);
+    width: 13px;
+    height: 13px;
+    /*transition: background-color 0.1s;*/
 }
+/*td:after {*/
+/*    transition: all 0.2s;*/
+/*}*/
+
 td.dead {
     background-color: transparent;
 }
@@ -22,6 +34,41 @@ td.newborn {
 td.aged {
     background-color:  #ff3300;
 }
+td.newborn--next {
+    background-color: rgb(33,33,33);
+}
+
+td.dead--next:after,
+td.newborn--next:after {
+    content: "";
+    position: absolute;
+    width: 6.5px;
+    height: 6.5px;
+    left: calc(50% - 3.25px);
+    top: calc(50% - 3.25px);
+}
+
+td.dead--next:after {
+    background-color: rgb(33,33,33);
+}
+td.newborn--next:after {
+    background-color: #ff9933;
+}
+
+td:first-child {
+    border-left: 1px solid rgb(0, 0, 0);
+}
+td:nth-child(8n) {
+    border-right: 1px solid rgb(0, 0, 0);
+}
+
+tr:nth-child(8n) td{
+    border-bottom: 1px solid rgb(0, 0, 0);
+}
+tr:first-child td{
+    border-top: 1px solid rgb(0, 0, 0);
+}
+
 button {
     background-color: #000;
     color: #ddd;
@@ -32,10 +79,4 @@ button {
 }
 button:focus {
     outline-color: #ff3300;
-}
-td:nth-child(10n) {
-    border-right: 1px solid rgb(50, 50, 50);
-}
-tr:nth-child(10n) td{
-    border-bottom: 1px solid rgb(50, 50, 50);
 }

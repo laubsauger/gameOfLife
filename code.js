@@ -1,9 +1,10 @@
 var Game = function() {
-    this.rows = 98;
-    this.cols = 210;
-    this.timerDelay = 25;
+    this.rows = 64;
+    this.cols = 64;
+    this.timerDelay = 16;
     this.playing = false;
     this.dragging = false;
+    this.cellElements = []; 
 };
 
 Game.prototype = {
@@ -11,6 +12,15 @@ Game.prototype = {
         this.initializeGridState();
         this.initializeGridView(document.getElementById('gridContainer'), this.gridState);
         this.setupControls();
+    },
+    initializeGridState: function() {
+        this.gridState = new Array(this.rows);
+        this.nextGridState = new Array(this.rows);
+
+        for (var iRows = 0; iRows < this.rows; iRows++) {
+            this.gridState[iRows] = new Array(this.cols);
+            this.nextGridState[iRows] = new Array(this.cols);
+        }
     },
     initializeGridView: function(container, gridState) {
         if (!container) {
@@ -21,7 +31,7 @@ Game.prototype = {
         this.gridContainer = container;
         
         var table = document.createElement('table');
-        
+
         for (var iRows = 0; iRows < this.rows; iRows++) {
             var tr = document.createElement('tr');
 
@@ -30,20 +40,13 @@ Game.prototype = {
                 cell.setAttribute('id', iRows + '_' + iCols);
                 cell.setAttribute('class', gridState[iRows][iCols] ? 'live newborn' : 'dead');
                 tr.appendChild(cell);
+                
+                this.cellElements[iRows + '_' + iCols] = cell;
             }
             table.appendChild(tr);
         }
 
         this.gridContainer.appendChild(table);
-    },
-    initializeGridState: function() {
-        this.gridState = new Array(this.rows);
-        this.nextGridState = new Array(this.rows);
-
-        for (var iRows = 0; iRows < this.rows; iRows++) {
-            this.gridState[iRows] = new Array(this.cols);
-            this.nextGridState[iRows] = new Array(this.cols);
-        }
     },
     resetGridState: function() {
         for (var iRows = 0; iRows < this.rows; iRows++) {
@@ -56,7 +59,7 @@ Game.prototype = {
     updateGridView: function() {
         for (var iRows = 0; iRows < this.rows; iRows++) {
             for (var iCols = 0; iCols < this.cols; iCols++) {
-                this.updateCellView(document.getElementById(iRows + '_' + iCols), this.updateCellState(iRows, iCols));
+                this.updateCellView(this.cellElements[iRows + '_' + iCols], this.updateCellState(iRows, iCols));
             }
         }
     },
@@ -107,12 +110,22 @@ Game.prototype = {
             console.error('dom element not found: #random');
             return;
         }
+        
+        this.nextStepButton = document.getElementById('next-step');
+        
+        if (!this.nextStepButton) {
+            console.error('dom element not found: #next-step');
+            return;
+        }
+    
     
         this.registerClickListener(this.gridContainer, this.cellClickHandler.bind(this));
+        this.registerDragListener(this.gridContainer, this.leftMouseDragHandler.bind(this));
+        
         this.registerClickListener(this.startButton, this.startButtonClickHandler.bind(this));
         this.registerClickListener(this.resetButton, this.resetButtonClickHandler.bind(this));
         this.registerClickListener(this.randomButton, this.randomButtonClickHandler.bind(this));
-        this.registerDragListener(this.gridContainer, this.leftMouseDragHandler.bind(this));
+        this.registerClickListener(this.nextStepButton, this.nextStepButtonClickHandler.bind(this));
     },
     registerClickListener: function(element, handler) {
         element.addEventListener('click', handler, false);
@@ -162,6 +175,9 @@ Game.prototype = {
     },
     resetButtonClickHandler: function(e) {
         this.reset();
+    },
+    nextStepButtonClickHandler: function(e) {
+        this.tick();
     },
     randomButtonClickHandler: function(e) {
         this.reset();

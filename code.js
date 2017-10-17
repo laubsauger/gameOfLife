@@ -11,7 +11,7 @@ var Game = function() {
         state: {
             alive: 1,
             dead: 0,
-            aged: 2,
+            // aged: 2,
             aliveNext: 3,
             deadNext: 4
         }    
@@ -91,7 +91,6 @@ Game.prototype = {
         });
     },
     updateCellView: function(cellElement, cellState, nextCellState) {
-        console.log('cellState', cellState, 'nextCellState', nextCellState);
         cellElement.setAttribute('class', this.getCellClassByState(cellState, nextCellState));
     },
     getCellClassByState: function(cellState, nextCellState) {
@@ -99,23 +98,11 @@ Game.prototype = {
             case this.CONST.state.dead: 
                 return 'dead';
             case this.CONST.state.deadNext:
-                var baseClass = '';
-                
-                if (cellState === this.CONST.state.alive) {
-                    baseClass = 'live newborn'
-                }
-                
-                if (cellState === this.CONST.state.aged) {
-                    baseClass = 'live aged';
-                }
-                
-                return baseClass + ' dead--next';
+                return 'live newborn dead--next';
             case this.CONST.state.alive: 
                 return 'live newborn';
             case this.CONST.state.aliveNext:
-                return 'newborn--next';
-            case this.CONST.state.aged:
-                return 'live aged';
+                return 'dead newborn--next';
             default:
                 throw Error('next cell state has no corresponding class');
         }
@@ -147,6 +134,7 @@ Game.prototype = {
             console.error('dom element not found: #next-step');
             return;
         }
+    
     
         this.registerClickListener(this.gridContainer, this.cellClickHandler.bind(this));
         //@TODO: this is not working
@@ -183,7 +171,7 @@ Game.prototype = {
             
             var nextCellState = typeof this.gridState[cellIndex[0]][cellIndex[1]] === "undefined" || this.gridState[cellIndex[0]][cellIndex[1]] === this.CONST.state.dead ? this.CONST.state.alive : this.CONST.state.dead;
             
-            this.updateCellView(e.target, this.gridState[cellIndex[0]][cellIndex[1]] || 0, nextCellState);
+            this.updateCellView(e.target, this.gridState[cellIndex[0]][cellIndex[1]], nextCellState);
             this.gridState[cellIndex[0]][cellIndex[1]] = nextCellState;
         }
         
@@ -269,64 +257,54 @@ Game.prototype = {
         for (var iRows = 0; iRows < this.rows; iRows++) {
             tempGridState[iRows] = [];
             for (var iCols = 0; iCols < this.cols; iCols++) {
-                var nextCellState = this.getNextCellState(this.gridState[iRows][iCols], this.getNumberOfAdjacentLivingCells(this.gridState, iRows, iCols), false);
+                var nextCellState = this.getNextCellState(this.gridState[iRows][iCols], this.getNumberOfAdjacentLivingCells(this.gridState, iRows, iCols));
                 tempGridState[iRows][iCols] = nextCellState;
             }
         }
         
-        this.nextGridState = tempGridState;
-        
         // calculate again to find future state
         for (var iRows = 0; iRows < this.rows; iRows++) {
             for (var iCols = 0; iCols < this.cols; iCols++) {
-                var nextCellState = this.getNextCellState(tempGridState, this.getNumberOfAdjacentLivingCells(tempGridState, iRows, iCols), true);
+                var nextCellState = this.getFutureCellState(tempGridState[iRows][iCols], this.getNumberOfAdjacentLivingCells(tempGridState, iRows, iCols));
                 this.nextGridState[iRows][iCols] = nextCellState;
             }
         }
     },
-    getNextCellState: function(cellState, numAdjacentLivingCells, isPredictionPass) {
-        // var deadState = this.CONST.state.dead;
-        // var aliveState = this.CONST.state.alive;
-        // var agedState = this.CONST.state.aged;
+    getNextCellState: function(cellState, numAdjacentLivingCells) {
+        if (cellState === this.CONST.state.aliveNext) {
+            cellState = this.CONST.state.dead;
+        }
         
-        // if (isPredictionPass) {
-        //     deadState = this.CONST.state.deadNext;
-        //     aliveState = this.CONST.state.aliveNext;
-        // }
+        if (cellState === this.CONST.state.deadNext) {
+            cellState = this.CONST.state.alive;
+        }
+        
+        if (cellState === this.CONST.state.alive) {
+            if (numAdjacentLivingCells === 2 || numAdjacentLivingCells === 3) {
+                return this.CONST.state.alive;
+            }
+        }
+        
+        if (cellState === this.CONST.state.dead && numAdjacentLivingCells === 3) {
+            return this.CONST.state.alive;
+        }
+
+        return this.CONST.state.dead;
+    },
+    getFutureCellState: function(cellState, numAdjacentLivingCells) {
+        if (cellState === this.CONST.state.alive) {
+            if (numAdjacentLivingCells < 2 || numAdjacentLivingCells > 3) {
+                return this.CONST.state.deadNext;
+            }
+        }
         
         if (cellState === this.CONST.state.dead) {
             if (numAdjacentLivingCells === 3) {
-                if (isPredictionPass) {
-                    return this.CONST.state.aliveNext    
-                }
-                
-                return this.CONST.state.alive;
+                return this.CONST.state.aliveNext;
             }
-            
-            if (isPredictionPass) {
-                return this.CONST.state.deadNext;
-            }
-            
-            return this.CONST.state.dead;
         }
         
-        if (numAdjacentLivingCells < 2 || numAdjacentLivingCells > 3) {
-            if (isPredictionPass) {
-                return this.CONST.state.deadNext;
-            }
-            
-            return this.CONST.state.dead;
-        }
-        
-        if (numAdjacentLivingCells === 2 || numAdjacentLivingCells === 3) {
-            return this.CONST.state.aged;
-        }
-        
-        if (isPredictionPass) {
-            return this.CONST.state.deadNext;
-        }
-        
-        return this.CONST.state.dead;
+        return cellState;
     },
     getNumberOfAdjacentLivingCells: function(gridState, row, col) {
         var livingCells = 0;
@@ -353,7 +331,7 @@ Game.prototype = {
             
             var neighbourCellState = gridState[neighbourRow][neighbourCol]; 
             
-            if (neighbourCellState === this.CONST.state.alive || neighbourCellState === this.CONST.state.aged) {
+            if (neighbourCellState === this.CONST.state.alive || neighbourCellState === this.CONST.state.deadNext) {
                 livingCells++;
             }
         }

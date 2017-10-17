@@ -37,10 +37,8 @@ td.dead {
     background-color: transparent;
 }
 td.newborn {
-    background-color: #ff9933;
-}
-td.aged {
-    background-color:  #ff3300;
+    /*background-color: #ff9933;*/
+    background-color: #ff3300;
 }
 td.newborn--next {
     background-color: rgb(33,33,33);
@@ -60,7 +58,7 @@ td.dead--next:after {
     background-color: rgb(33,33,33);
 }
 td.newborn--next:after {
-    background-color: #ff9933;
+    background-color: #ff3300;
 }
 
 td:first-child {

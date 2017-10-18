@@ -1,9 +1,9 @@
 var Game = function() {
-    this.rows = 64;
-    this.cols = 64;
-    this.cellWidth = 16;
-    this.cellHeight = 16;
-    this.timerDelay = 160;
+    this.rows = 100;
+    this.cols = 200;
+    this.cellWidth = 7;
+    this.cellHeight = 7;
+    this.timerDelay = 500;
     this.playing = false;
     this.dragging = false;
     this.cellElements = [];
@@ -14,7 +14,11 @@ var Game = function() {
             // aged: 2,
             aliveNext: 3,
             deadNext: 4
-        }    
+        },
+        rules: {
+            underpopulationThreshold: 2,
+            overpopulationThreshold: 3
+        }
     };
 };
 
@@ -32,6 +36,8 @@ Game.prototype = {
             this.gridState[iRows] = new Array(this.cols);
             this.nextGridState[iRows] = new Array(this.cols);
         }
+        
+        this.resetGridState();
     },
     initializeGridView: function(container, gridState) {
         if (!container) {
@@ -72,15 +78,22 @@ Game.prototype = {
     updateGridView: function() {
         for (var iRows = 0; iRows < this.rows; iRows++) {
             for (var iCols = 0; iCols < this.cols; iCols++) {
-                this.updateCellView(this.cellElements[iRows + '_' + iCols], this.gridState[iRows, iCols], this.updateCellState(iRows, iCols));
+                var nextCellState = this.nextGridState[iRows][iCols];
+                
+                if (this.gridState[iRows][iCols] !== nextCellState) {
+                    this.updateCellView(this.cellElements[iRows + '_' + iCols], nextCellState);
+                    this.gridState[iRows][iCols] = nextCellState;
+                }
+                
+                // this.nextGridState[iRows][iCols] = 0;
             }
         }
     },
-    updateCellState: function(row, col) {
-        this.gridState[row][col] = this.nextGridState[row][col];
-        this.nextGridState[row][col] = 0;
+    updateCellView: function(cellElement, cellState) {
+        // collection for each state
+        // apply class in bulk
         
-        return this.gridState[row][col];
+        cellElement.className = this.getCellClassByState(cellState);
     },
     resetGridView: function() {
         var self = this;
@@ -90,11 +103,8 @@ Game.prototype = {
             self.updateCellView(cell, 0, 0);
         });
     },
-    updateCellView: function(cellElement, cellState, nextCellState) {
-        cellElement.setAttribute('class', this.getCellClassByState(cellState, nextCellState));
-    },
-    getCellClassByState: function(cellState, nextCellState) {
-        switch(nextCellState) {
+    getCellClassByState: function(cellState) {
+        switch(cellState) {
             case this.CONST.state.dead: 
                 return 'dead';
             case this.CONST.state.deadNext:
@@ -104,7 +114,7 @@ Game.prototype = {
             case this.CONST.state.aliveNext:
                 return 'dead newborn--next';
             default:
-                throw Error('next cell state has no corresponding class');
+                throw Error('next cell state has no corresponding class: ' + JSON.stringify(cellState));
         }
     },
     setupControls: function() {
@@ -168,14 +178,41 @@ Game.prototype = {
     cellClickHandler: function(e) {
         if (e.target !== e.currentTarget && e.target.tagName === 'TD') {
             var cellIndex = this.getCellIndex(e.target);
-            
-            var nextCellState = typeof this.gridState[cellIndex[0]][cellIndex[1]] === "undefined" || this.gridState[cellIndex[0]][cellIndex[1]] === this.CONST.state.dead ? this.CONST.state.alive : this.CONST.state.dead;
-            
-            this.updateCellView(e.target, this.gridState[cellIndex[0]][cellIndex[1]], nextCellState);
+            var nextCellState = this.getFutureCellState(this.gridState[cellIndex[0]][cellIndex[1]], this.getNumberOfAdjacentLivingCells(this.getNeighbours(cellIndex[0], cellIndex[1]), this.gridState));
+
             this.gridState[cellIndex[0]][cellIndex[1]] = nextCellState;
+            this.updateCellView(e.target, nextCellState);
+            
+            
+            //@todo: durch nachbarn rödeln und future cell state visualisieren
+            // var neighbours = this.getNeighbours(cellIndex[0], cellIndex[1]);
+            
+            // for (var i = 0; i < neighbours.length; i++) {
+            //     var neighbourRow = neighbours[i][0];
+            //     var neighbourCol = neighbours[i][1];
+                
+            //     if (neighbourRow < 0 || neighbourCol < 0 || neighbourRow >= this.rows || neighbourCol >= this.cols) {
+            //         // out of bounds
+            //         continue;
+            //     }
+                
+            //     var neighbourCurrentState = this.coerceState(this.gridState[neighbourRow][neighbourCol]);
+            //     if (neighbourCurrentState !== this.CONST.state.alive && neighbourCurrentState !== this.CONST.state.dead) {
+            //         continue;
+            //     }
+                
+            //     var neighbourNextCellState = this.getFutureCellState(this.coerceState(this.gridState[neighbourRow][neighbourCol]), this.getNumberOfAdjacentLivingCells(this.getNeighbours(neighbourRow, neighbourCol), this.gridState, neighbourRow, neighbourCol));
+                
+            //     console.log(neighbourNextCellState);
+            //     this.updateCellView(this.cellElements[neighbourRow + '_' + neighbourCol], this.gridState[neighbourRow][neighbourCol], neighbourNextCellState);
+            //     this.gridState[neighbourRow][neighbourCol] = neighbourNextCellState;
+            // }
         }
         
         e.stopPropagation();
+    },
+    coerceState: function(state) {
+        return typeof state === "undefined" || state === this.CONST.state.dead ? this.CONST.state.alive : this.CONST.state.dead;
     },
     getCellIndex: function(cellElement) {
           return cellElement.getAttribute('id').split('_');
@@ -257,16 +294,22 @@ Game.prototype = {
         for (var iRows = 0; iRows < this.rows; iRows++) {
             tempGridState[iRows] = [];
             for (var iCols = 0; iCols < this.cols; iCols++) {
-                var nextCellState = this.getNextCellState(this.gridState[iRows][iCols], this.getNumberOfAdjacentLivingCells(this.gridState, iRows, iCols));
-                tempGridState[iRows][iCols] = nextCellState;
+                var nextCellState = this.getNextCellState(this.gridState[iRows][iCols], this.getNumberOfAdjacentLivingCells(this.getNeighbours(iRows, iCols), this.gridState))
+                
+                if (nextCellState !== this.gridState[iRows][iCols]) {
+                    tempGridState[iRows][iCols] = nextCellState;
+                }
             }
         }
         
-        // calculate again to find future state
+        // calculate again to find future state (used for visualizing next tick (aliveNext, deadNext states)
         for (var iRows = 0; iRows < this.rows; iRows++) {
             for (var iCols = 0; iCols < this.cols; iCols++) {
-                var nextCellState = this.getFutureCellState(tempGridState[iRows][iCols], this.getNumberOfAdjacentLivingCells(tempGridState, iRows, iCols));
-                this.nextGridState[iRows][iCols] = nextCellState;
+                if (typeof tempGridState[iRows][iCols] === "undefined") {
+                    continue;
+                }
+                
+                this.nextGridState[iRows][iCols] = this.getFutureCellState(tempGridState[iRows][iCols], this.getNumberOfAdjacentLivingCells(this.getNeighbours(iRows, iCols), tempGridState));
             }
         }
     },
@@ -280,12 +323,12 @@ Game.prototype = {
         }
         
         if (cellState === this.CONST.state.alive) {
-            if (numAdjacentLivingCells === 2 || numAdjacentLivingCells === 3) {
+            if (numAdjacentLivingCells === this.CONST.rules.underpopulationThreshold || numAdjacentLivingCells === this.CONST.rules.overpopulationThreshold) {
                 return this.CONST.state.alive;
             }
         }
         
-        if (cellState === this.CONST.state.dead && numAdjacentLivingCells === 3) {
+        if (cellState === this.CONST.state.dead && numAdjacentLivingCells === this.CONST.rules.overpopulationThreshold) {
             return this.CONST.state.alive;
         }
 
@@ -293,33 +336,22 @@ Game.prototype = {
     },
     getFutureCellState: function(cellState, numAdjacentLivingCells) {
         if (cellState === this.CONST.state.alive) {
-            if (numAdjacentLivingCells < 2 || numAdjacentLivingCells > 3) {
+            if (numAdjacentLivingCells < this.CONST.rules.underpopulationThreshold || numAdjacentLivingCells > this.CONST.rules.overpopulationThreshold) {
                 return this.CONST.state.deadNext;
             }
         }
         
         if (cellState === this.CONST.state.dead) {
-            if (numAdjacentLivingCells === 3) {
+            if (numAdjacentLivingCells === this.CONST.rules.overpopulationThreshold) {
                 return this.CONST.state.aliveNext;
             }
         }
         
         return cellState;
     },
-    getNumberOfAdjacentLivingCells: function(gridState, row, col) {
+    getNumberOfAdjacentLivingCells: function(neighbours, gridState) {
         var livingCells = 0;
-        
-        var neighbours = [
-            [row - 1, col - 1], 
-            [row, col - 1], 
-            [row + 1, col - 1],
-            [row - 1, col], 
-            [row + 1, col],
-            [row + 1, col + 1], 
-            [row, col + 1], 
-            [row - 1, col + 1]
-        ];
-        
+
         for (var i = 0; i < neighbours.length; i++) {
             var neighbourRow = neighbours[i][0];
             var neighbourCol = neighbours[i][1];
@@ -334,9 +366,25 @@ Game.prototype = {
             if (neighbourCellState === this.CONST.state.alive || neighbourCellState === this.CONST.state.deadNext) {
                 livingCells++;
             }
+            
+            if (livingCells > this.CONST.rules.overpopulationThreshold) {
+                return livingCells;
+            }
         }
     
         return livingCells;
+    },
+    getNeighbours: function(row, col) {
+        return [
+            [row - 1, col - 1], 
+            [row, col - 1], 
+            [row + 1, col - 1],
+            [row - 1, col], 
+            [row + 1, col],
+            [row + 1, col + 1], 
+            [row, col + 1], 
+            [row - 1, col + 1]
+        ];
     }
 };
 

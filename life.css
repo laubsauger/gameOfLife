@@ -25,8 +25,8 @@ table {
 td {
     position: relative;
     border: 1px solid rgb(0, 0, 0);
-    width: 13px;
-    height: 13px;
+    /*width: 13px;*/
+    /*height: 13px;*/
     /*transition: background-color 0.1s;*/
 }
 /*td:after {*/
@@ -48,10 +48,10 @@ td.dead--next:after,
 td.newborn--next:after {
     content: "";
     position: absolute;
-    width: 6.5px;
-    height: 6.5px;
-    left: calc(50% - 3.25px);
-    top: calc(50% - 3.25px);
+    width: 3.5px;
+    height: 3.5px;
+    left: calc(50% - 1.75px);
+    top: calc(50% - 1.75px);
 }
 
 td.dead--next:after {
